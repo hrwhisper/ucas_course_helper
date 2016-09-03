@@ -105,6 +105,6 @@ if __name__ == '__main__':
         try:
             if s.start() != 0:
                 break
-            time.sleep(10)
         except Exception as e:
             print(e)
+        time.sleep(10)
