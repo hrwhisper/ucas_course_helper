@@ -30,6 +30,7 @@ class UcasCourse(object):
         }
 
     def login_sep(self):
+        # 登录sep
         url = "http://sep.ucas.ac.cn/slogin"
         post_data = {
             "userName": self.username,
@@ -39,6 +40,7 @@ class UcasCourse(object):
         self.session.post(url, data=post_data, headers=self.headers)
 
     def login_jwxk(self):
+        # 从sep中获取Identity Key来登录选课系统
         url = "http://sep.ucas.ac.cn/portal/site/226/821"
         self.headers["Referer"] = "http://sep.ucas.ac.cn/appStore"
         r = self.session.get(url, headers=self.headers)
@@ -61,6 +63,7 @@ class UcasCourse(object):
         return r.text
 
     def get_course(self):
+        # 获取课程开课学院的id，以及选课界面HTML
         html = self.login_jwxk()
         regular = r'<label for="id_([\S]+)">' + self.course_id[:2] + r'-'
         institute_id = re.findall(regular, html)[0]
@@ -73,6 +76,7 @@ class UcasCourse(object):
         return html, institute_id
 
     def select_course(self):
+        # 选课，主要是获取课程背后的ID
         html, institute_id = self.get_course()
         url = 'http://jwxk.ucas.ac.cn' + \
               re.findall(r'<form id="regfrm" name="regfrm" action="([\S]+)" \S*class=', html)[0]
