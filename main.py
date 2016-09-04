@@ -22,9 +22,9 @@ class UcasCourse(object):
         self.headers = {
             "Host": "sep.ucas.ac.cn",
             "Connection": "keep-alive",
-            "Content-Length": "56",
+            "Upgrade-Insecure-Requests": "1",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-            "Referer": "http://sep.ucas.ac.cn/",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, sdch",
             "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4",
         }
@@ -42,21 +42,11 @@ class UcasCourse(object):
     def login_jwxk(self):
         # 从sep中获取Identity Key来登录选课系统
         url = "http://sep.ucas.ac.cn/portal/site/226/821"
-        self.headers["Referer"] = "http://sep.ucas.ac.cn/appStore"
         r = self.session.get(url, headers=self.headers)
         code = re.findall(r'"http://jwxk.ucas.ac.cn/login\?Identity=(.*)"', r.text)[0]
 
         url = "http://jwxk.ucas.ac.cn/login?Identity=" + code
-        self.headers = {
-            "Host": "jwxk.ucas.ac.cn",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-            "Referer": "http://sep.ucas.ac.cn/",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, sdch",
-            "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4",
-        }
+        self.headers['Host'] = "jwxk.ucas.ac.cn"
         self.session.get(url, headers=self.headers)
         url = 'http://jwxk.ucas.ac.cn/courseManage/main'
         r = self.session.get(url, headers=self.headers)
