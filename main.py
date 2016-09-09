@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2016/9/1
 # @Author  : hrwhisper
-import requests
+from __future__ import print_function
+
 import re
 import time
 
+import requests
 
 def read_file():
     with open("./private") as f:
