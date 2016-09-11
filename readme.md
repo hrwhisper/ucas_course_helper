@@ -13,5 +13,10 @@ private中，各行表示意义如下：
 
 ## 环境说明
 
-- python 3.5.2
+- python 3.5.2 or python 2.7.6
 - requests 2.11
+
+## 更新说明
+
+- 提升用户体验
+- 增加python2支持

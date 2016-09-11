@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2016/9/1
 # @Author  : hrwhisper
-import requests
+from __future__ import print_function
 import re
 import time
+import requests
 
 
 def read_file():
@@ -37,7 +38,9 @@ class UcasCourse(object):
             "pwd": self.password,
             "sb": "sb"
         }
-        self.session.post(url, data=post_data, headers=self.headers)
+        html = self.session.post(url, data=post_data, headers=self.headers).text
+        if html.find(u'<div class="alert alert-error">密码错误</div>') != -1:
+            raise ValueError('用户密码错误，请检查private文件')
 
     def login_jwxk(self):
         # 从sep中获取Identity Key来登录选课系统
@@ -76,7 +79,7 @@ class UcasCourse(object):
             post_data['did_' + sid] = sid
 
         r = self.session.post(url, data=post_data, headers=self.headers)
-        if r.text.find('选课成功') != -1:
+        if r.text.find(u'选课成功') != -1:
             print('选课成功')
             return 1
         else:
@@ -95,6 +98,12 @@ if __name__ == '__main__':
         try:
             if s.start() != 0:
                 break
+        except ValueError as e:
+            print('用户密码错误，请检查private文件')
+            exit(1)
+        except IndexError as e:
+            print('课程编号出错，可能已被选上')
+            exit(1)
         except Exception as e:
             print(e)
         time.sleep(10)
