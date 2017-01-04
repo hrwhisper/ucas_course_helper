@@ -9,14 +9,20 @@ import requests
 
 def read_file():
     with open("./private") as f:
-        res = f.read().split("\n")
-        username, password, course_id = res
-        course_id, is_degree = course_id.split()
-    return username, password, course_id, is_degree == '1'
+        username = password = None
+        courses = []
+        for i, line in enumerate(f):
+            if i == 0:
+                username = line.strip()
+            elif i == 1:
+                password = line.strip()
+            else:
+                courses.append(line.strip().split())
+    return username, password, courses
 
 
 class UcasCourse(object):
-    username, password, course_id, is_degree = read_file()
+    username, password, course = read_file()
 
     def __init__(self):
         self.session = requests.session()
@@ -58,7 +64,7 @@ class UcasCourse(object):
     def get_course(self):
         # 获取课程开课学院的id，以及选课界面HTML
         html = self.login_jwxk()
-        regular = r'<label for="id_([\S]+)">' + self.course_id[:2] + r'-'
+        regular = r'<label for="id_([\S]+)">' + self.course[0][0][:2] + r'-'
         institute_id = re.findall(regular, html)[0]
 
         url = 'http://jwxk.ucas.ac.cn' + \
@@ -69,18 +75,20 @@ class UcasCourse(object):
         return html, institute_id
 
     def select_course(self):
+        if not self.course: return -1
         # 选课，主要是获取课程背后的ID
         html, institute_id = self.get_course()
         url = 'http://jwxk.ucas.ac.cn' + \
               re.findall(r'<form id="regfrm" name="regfrm" action="([\S]+)" \S*class=', html)[0]
-        sid = re.findall(r'<span id="courseCode_([\S]+)">' + self.course_id + '</span>', html)[0]
+        sid = re.findall(r'<span id="courseCode_([\S]+)">' + self.course[0][0] + '</span>', html)[0]
         post_data = {'deptIds': institute_id, 'sids': sid}
-        if self.is_degree:
+        if self.course[0][1] == '1':
             post_data['did_' + sid] = sid
 
         r = self.session.post(url, data=post_data, headers=self.headers)
         if r.text.find(u'选课成功') != -1:
             print('选课成功')
+            self.course.pop(0)
             return 1
         else:
             info = re.findall('<label id="loginError" class="error">([\S]+)</label>', r.text)[0]
@@ -93,17 +101,23 @@ class UcasCourse(object):
 
 
 if __name__ == '__main__':
+    cnt = 0
     while True:
         s = UcasCourse()
         try:
-            if s.start() != 0:
-                break
+            res =  s.start()
+            if res== -1:
+                print('全部选完')
+                exit(0)
+            elif res == 1:
+                print(cnt + 1,' success')
+                cnt += 1
         except ValueError as e:
             print('用户密码错误，请检查private文件')
             exit(1)
         except IndexError as e:
             print('课程编号出错，可能已被选上')
-            exit(1)
+            s.course.pop(0)
         except Exception as e:
             print(e)
-        time.sleep(10)
+        time.sleep(5)
