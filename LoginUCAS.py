@@ -6,10 +6,6 @@ import requests
 from MyOCR import image_to_string
 
 
-class PasswordError(Exception):
-    pass
-
-
 class LoginUCAS(object):
     def __init__(self, vercode_save_name='certCode.jpg'):
         self.username, self.password = LoginUCAS._read_username_and_password()
@@ -66,7 +62,8 @@ class LoginUCAS(object):
         }
         html = self.session.post(url, data=post_data, headers=self.headers).text
         if html.find('密码错误') != -1:
-            raise PasswordError('用户名或者密码错误')
+            print('用户名或者密码错误，请检查private文件')
+            exit(1)
         elif html.find('验证码错误') != -1:
             time.sleep(2)
             self.cnt += 1

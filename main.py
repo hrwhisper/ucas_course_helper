@@ -5,7 +5,7 @@ from __future__ import print_function
 import re
 import time
 
-from LoginUCAS import LoginUCAS, PasswordError
+from LoginUCAS import LoginUCAS
 
 
 class NoLoginError(Exception):
@@ -32,13 +32,9 @@ class UcasCourse(object):
         self.course = UcasCourse._read_course_info()
 
     def _init_session(self):
-        try:
-            t = LoginUCAS().login_sep()
-            self.session = t.session
-            self.headers = t.headers
-        except PasswordError:
-            print('用户密码错误，请检查private文件')
-            exit(1)
+        t = LoginUCAS().login_sep()
+        self.session = t.session
+        self.headers = t.headers
 
     @classmethod
     def _read_course_info(self):
