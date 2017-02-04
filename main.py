@@ -4,49 +4,15 @@
 from __future__ import print_function
 import re
 import time
-import requests
-
-
-def read_file():
-    with open("./private") as f:
-        username = password = None
-        courses = []
-        for i, line in enumerate(f):
-            if i == 0:
-                username = line.strip()
-            elif i == 1:
-                password = line.strip()
-            else:
-                courses.append(line.strip().split())
-    return username, password, courses
+from LoginUCAS import LoginUCAS
 
 
 class UcasCourse(object):
-    username, password, course = read_file()
-
     def __init__(self):
-        self.session = requests.session()
-        self.headers = {
-            "Host": "sep.ucas.ac.cn",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, sdch",
-            "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4",
-        }
-
-    def login_sep(self):
-        # 登录sep
-        url = "http://sep.ucas.ac.cn/slogin"
-        post_data = {
-            "userName": self.username,
-            "pwd": self.password,
-            "sb": "sb"
-        }
-        html = self.session.post(url, data=post_data, headers=self.headers).text
-        if html.find(u'<div class="alert alert-error">密码错误</div>') != -1:
-            raise ValueError('用户密码错误，请检查private文件')
+        t = LoginUCAS().login_sep()
+        self.session = t.session
+        self.headers = t.headers
+        self.course = t.courses
 
     def login_jwxk(self):
         # 从sep中获取Identity Key来登录选课系统
@@ -96,7 +62,6 @@ class UcasCourse(object):
             return 0
 
     def start(self):
-        self.login_sep()
         return self.select_course()
 
 
@@ -105,12 +70,12 @@ if __name__ == '__main__':
     while True:
         s = UcasCourse()
         try:
-            res =  s.start()
-            if res== -1:
+            res = s.start()
+            if res == -1:
                 print('全部选完')
                 exit(0)
             elif res == 1:
-                print(cnt + 1,' success')
+                print(cnt + 1, ' success')
                 cnt += 1
         except ValueError as e:
             print('用户密码错误，请检查private文件')
@@ -118,6 +83,7 @@ if __name__ == '__main__':
         except IndexError as e:
             print('课程编号出错，可能已被选上')
             s.course.pop(0)
+            cnt += 1
         except Exception as e:
             print(e)
-        time.sleep(5)
+        time.sleep(2)
