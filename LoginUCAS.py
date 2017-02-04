@@ -30,8 +30,15 @@ class LoginUCAS(object):
     @classmethod
     def _read_username_and_password(cls):
         with open("./private.txt") as f:
-            username, password = f.read().split('\n')
-        return username.strip(), password.strip()
+            username = password = None
+            for i, line in enumerate(f):
+                if i == 0:
+                    username = line.strip()
+                elif i == 1:
+                    password = line.strip()
+                else:
+                    break
+        return username, password
 
     def _download_verification_code(self):
         r = self.session.get('http://sep.ucas.ac.cn/changePic', stream=True, headers=self.headers)

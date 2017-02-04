@@ -4,12 +4,15 @@
 from __future__ import print_function
 import re
 import time
-import requests
 
 from LoginUCAS import LoginUCAS, PasswordError
 
 
 class NoLoginError(Exception):
+    pass
+
+
+class NotFoundCourseError(Exception):
     pass
 
 
@@ -29,15 +32,20 @@ class UcasCourse(object):
         self.course = UcasCourse._read_course_info()
 
     def _init_session(self):
-        t = LoginUCAS().login_sep()
-        self.session = t.session
-        self.headers = t.headers
+        try:
+            t = LoginUCAS().login_sep()
+            self.session = t.session
+            self.headers = t.headers
+        except PasswordError:
+            print('用户密码错误，请检查private文件')
+            exit(1)
 
     @classmethod
     def _read_course_info(self):
-        with open("./course_list.txt") as f:
+        with open("./private.txt") as f:
             courses = []
             for i, line in enumerate(f):
+                if i < 2: continue
                 courses.append(line.strip().split())
         return courses
 
@@ -76,7 +84,11 @@ class UcasCourse(object):
         html, institute_id = self.get_course()
         url = 'http://jwxk.ucas.ac.cn' + \
               re.findall(r'<form id="regfrm" name="regfrm" action="([\S]+)" \S*class=', html)[0]
-        sid = re.findall(r'<span id="courseCode_([\S]+)">' + self.course[0][0] + '</span>', html)[0]
+        sid = re.findall(r'<span id="courseCode_([\S]+)">' + self.course[0][0] + '</span>', html)
+        if sid:
+            sid = sid[0]
+        else:
+            raise NotFoundCourseError
         post_data = {'deptIds': institute_id, 'sids': sid}
         if self.course[0][1] == '1':
             post_data['did_' + sid] = sid
@@ -98,39 +110,15 @@ class UcasCourse(object):
                 elif not self.course:
                     print('全部选完')
                     exit(0)
-            except PasswordError:
-                print('用户密码错误，请检查private文件')
-                exit(1)
             except NoLoginError:
                 self._init_session()
-            except IndexError:
-                print('课程编号出错，可能已被选上')
-                self.course.pop(0)
+            except NotFoundCourseError:
+                print('尝试选择课程编号为 {} 的时候出错，可能编号错误或者已被选上'.format(self.course.pop(0)[0]))
             except Exception as e:
                 print(e)
-            time.sleep(5)
+                time.sleep(5)
+                self._init_session()
 
 
 if __name__ == '__main__':
-    cnt = 0
     UcasCourse().start()
-    # while True:
-    #     s = UcasCourse()
-    #     try:
-    #         res = s.start()
-    #         if res == -1:
-    #             print('全部选完')
-    #             exit(0)
-    #         elif res == 1:
-    #             print(cnt + 1, ' success')
-    #             cnt += 1
-    #     except ValueError as e:
-    #         print('用户密码错误，请检查private文件')
-    #         exit(1)
-    #     except IndexError as e:
-    #         print('课程编号出错，可能已被选上')
-    #         s.course.pop(0)
-    #         cnt += 1
-    #     except Exception as e:
-    #         print(e)
-    #     time.sleep(2)
