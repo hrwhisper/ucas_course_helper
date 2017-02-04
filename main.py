@@ -4,21 +4,51 @@
 from __future__ import print_function
 import re
 import time
-from LoginUCAS import LoginUCAS
+import requests
+
+from LoginUCAS import LoginUCAS, PasswordError
+
+
+class NoLoginError(Exception):
+    pass
+
+
+def read_course_file():
+    with open("./course_list.txt") as f:
+        courses = []
+        for i, line in enumerate(f):
+            courses.append(line.strip().split())
+    return courses
 
 
 class UcasCourse(object):
     def __init__(self):
+        self.session = None
+        self.headers = None
+        self._init_session()
+        self.course = UcasCourse._read_course_info()
+
+    def _init_session(self):
         t = LoginUCAS().login_sep()
         self.session = t.session
         self.headers = t.headers
-        self.course = t.courses
+
+    @classmethod
+    def _read_course_info(self):
+        with open("./course_list.txt") as f:
+            courses = []
+            for i, line in enumerate(f):
+                courses.append(line.strip().split())
+        return courses
 
     def login_jwxk(self):
         # 从sep中获取Identity Key来登录选课系统
         url = "http://sep.ucas.ac.cn/portal/site/226/821"
         r = self.session.get(url, headers=self.headers)
-        code = re.findall(r'"http://jwxk.ucas.ac.cn/login\?Identity=(.*)"', r.text)[0]
+        try:
+            code = re.findall(r'"http://jwxk.ucas.ac.cn/login\?Identity=(.*)"', r.text)[0]
+        except IndexError:
+            raise NoLoginError
 
         url = "http://jwxk.ucas.ac.cn/login?Identity=" + code
         self.headers['Host'] = "jwxk.ucas.ac.cn"
@@ -41,7 +71,7 @@ class UcasCourse(object):
         return html, institute_id
 
     def select_course(self):
-        if not self.course: return -1
+        if not self.course: return None
         # 选课，主要是获取课程背后的ID
         html, institute_id = self.get_course()
         url = 'http://jwxk.ucas.ac.cn' + \
@@ -53,37 +83,54 @@ class UcasCourse(object):
 
         r = self.session.post(url, data=post_data, headers=self.headers)
         if r.text.find(u'选课成功') != -1:
-            print('选课成功')
-            self.course.pop(0)
-            return 1
+            return self.course.pop(0)[0]
         else:
             info = re.findall('<label id="loginError" class="error">([\S]+)</label>', r.text)[0]
             print(info)
-            return 0
+            return None
 
     def start(self):
-        return self.select_course()
+        while True:
+            try:
+                res = self.select_course()
+                if res is not None:
+                    print('课程编号为 {} 的选课成功'.format(res))
+                elif not self.course:
+                    print('全部选完')
+                    exit(0)
+            except PasswordError:
+                print('用户密码错误，请检查private文件')
+                exit(1)
+            except NoLoginError:
+                self._init_session()
+            except IndexError:
+                print('课程编号出错，可能已被选上')
+                self.course.pop(0)
+            except Exception as e:
+                print(e)
+            time.sleep(5)
 
 
 if __name__ == '__main__':
     cnt = 0
-    while True:
-        s = UcasCourse()
-        try:
-            res = s.start()
-            if res == -1:
-                print('全部选完')
-                exit(0)
-            elif res == 1:
-                print(cnt + 1, ' success')
-                cnt += 1
-        except ValueError as e:
-            print('用户密码错误，请检查private文件')
-            exit(1)
-        except IndexError as e:
-            print('课程编号出错，可能已被选上')
-            s.course.pop(0)
-            cnt += 1
-        except Exception as e:
-            print(e)
-        time.sleep(2)
+    UcasCourse().start()
+    # while True:
+    #     s = UcasCourse()
+    #     try:
+    #         res = s.start()
+    #         if res == -1:
+    #             print('全部选完')
+    #             exit(0)
+    #         elif res == 1:
+    #             print(cnt + 1, ' success')
+    #             cnt += 1
+    #     except ValueError as e:
+    #         print('用户密码错误，请检查private文件')
+    #         exit(1)
+    #     except IndexError as e:
+    #         print('课程编号出错，可能已被选上')
+    #         s.course.pop(0)
+    #         cnt += 1
+    #     except Exception as e:
+    #         print(e)
+    #     time.sleep(2)

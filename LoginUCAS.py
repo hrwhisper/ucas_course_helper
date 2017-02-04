@@ -4,13 +4,15 @@
 import time
 import requests
 from MyOCR import image_to_string
-from ReadInfo import read_file
+
+
+class PasswordError(Exception):
+    pass
 
 
 class LoginUCAS(object):
-    username, password, courses = read_file()
-
     def __init__(self, vercode_save_name='certCode.jpg'):
+        self.username, self.password = LoginUCAS._read_username_and_password()
         self.cnt = 0
         self.__BEAUTIFULSOUPPARSE = 'html5lib'  # or use 'lxml'
         self.session = requests.session()
@@ -24,6 +26,12 @@ class LoginUCAS(object):
             "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4",
         }
         self.vercode_save_name = vercode_save_name
+
+    @classmethod
+    def _read_username_and_password(cls):
+        with open("./private.txt") as f:
+            username, password = f.read().split('\n')
+        return username.strip(), password.strip()
 
     def _download_verification_code(self):
         r = self.session.get('http://sep.ucas.ac.cn/changePic', stream=True, headers=self.headers)
@@ -51,7 +59,7 @@ class LoginUCAS(object):
         }
         html = self.session.post(url, data=post_data, headers=self.headers).text
         if html.find('密码错误') != -1:
-            raise ValueError('用户名或者密码错误')
+            raise PasswordError('用户名或者密码错误')
         elif html.find('验证码错误') != -1:
             time.sleep(2)
             self.cnt += 1
@@ -62,6 +70,7 @@ class LoginUCAS(object):
 
 if __name__ == '__main__':
     pass
+    # LoginUCAS().login_sep()
     # total = 0
     # test_num = 50
     # for i in range(test_num):
