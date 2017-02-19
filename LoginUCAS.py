@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2017/2/1
 # @Author  : hrwhisper
+import codecs
+import os
 import time
+from sys import exit
 import requests
 from MyOCR import image_to_string
 
@@ -25,11 +28,14 @@ class LoginUCAS(object):
 
     @classmethod
     def _read_username_and_password(cls):
-        with open("./private.txt") as f:
+        with codecs.open(r'./private.txt', "r", 'utf-8') as f:
             username = password = None
             for i, line in enumerate(f):
                 if i == 0:
-                    username = line.strip()
+                    line = bytes(line.encode('utf-8'))
+                    if line[:3] == codecs.BOM_UTF8:
+                        line = line[3:]
+                    username = line.decode('utf-8').strip()
                 elif i == 1:
                     password = line.strip()
                 else:
@@ -63,6 +69,7 @@ class LoginUCAS(object):
         html = self.session.post(url, data=post_data, headers=self.headers).text
         if html.find('密码错误') != -1:
             print('用户名或者密码错误，请检查private文件')
+            os.system("pause")
             exit(1)
         elif html.find('验证码错误') != -1:
             time.sleep(2)
@@ -73,8 +80,7 @@ class LoginUCAS(object):
 
 
 if __name__ == '__main__':
-    pass
-    # LoginUCAS().login_sep()
+    LoginUCAS().login_sep()
     # total = 0
     # test_num = 50
     # for i in range(test_num):

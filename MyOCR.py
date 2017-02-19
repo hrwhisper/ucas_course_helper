@@ -3,6 +3,7 @@
 # @Author  : hrwhisper
 
 import os
+from sys import exit
 import re
 import subprocess
 from PIL import Image
@@ -18,9 +19,15 @@ def pre_process(func):
         image = image.crop((cut_size, cut_size, w - cut_size, h - cut_size))
         save_name = filename  # + '1.jpg'
         image.save(save_name)
-        res = func(save_name)
-        os.remove(save_name)
-        return res
+        try:
+            res = func(save_name)
+            os.remove(save_name)
+            return res
+        except FileNotFoundError:
+            print('请检查是否安装tesseract-OCR')
+            os.remove(save_name)
+            os.system("pause")
+            exit(1)
 
     return _wrapper
 
