@@ -4,7 +4,7 @@
 - python main.py
 
 ### private文件说明
-private中，各行表示意义如下：
+private.txt中，各行表示意义如下：
 
 1. 第一行为登录选课系统的账号
 2. 第二行为密码
@@ -24,7 +24,6 @@ private中，各行表示意义如下：
 ## 环境说明
 
 - python 3.5.2 or python 2.7.6
-- requests 2.11
 
 ### 环境安装方法
 - pip install requests
@@ -37,6 +36,5 @@ private中，各行表示意义如下：
 ## 更新说明
 
 - 提升用户体验
-- 增加python2支持
 - 支持验证码识别
 - 最近更新优化了选课逻辑，提升效率
