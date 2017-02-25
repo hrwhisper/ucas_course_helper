@@ -16,14 +16,6 @@ class NotFoundCourseError(Exception):
     pass
 
 
-def read_course_file():
-    with open("./course_list.txt") as f:
-        courses = []
-        for i, line in enumerate(f):
-            courses.append(line.strip().split())
-    return courses
-
-
 class UcasCourse(object):
     def __init__(self):
         self.session = None
@@ -92,10 +84,13 @@ class UcasCourse(object):
         r = self.session.post(url, data=post_data, headers=self.headers)
         if r.text.find(u'选课成功') != -1:
             return self.course.pop(0)[0]
-        else:
+        else:  # 一般是课程已满
             info = re.findall('<label id="loginError" class="error">([\S]+)</label>', r.text)[0]
             print(info)
             return None
+
+    def sleep(self, t=5):
+        time.sleep(t)
 
     def start(self):
         while True:
@@ -106,13 +101,15 @@ class UcasCourse(object):
                 elif not self.course:
                     print('全部选完')
                     exit(0)
+                else:
+                    self.sleep()
             except NoLoginError:
                 self._init_session()
             except NotFoundCourseError:
                 print('尝试选择课程编号为 {} 的时候出错，可能编号错误或者已被选上'.format(self.course.pop(0)[0]))
             except Exception as e:
                 print(e)
-                time.sleep(5)
+                self.sleep()
                 self._init_session()
 
 

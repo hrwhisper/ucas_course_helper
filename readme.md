@@ -23,7 +23,10 @@ private.txt中，各行表示意义如下：
 
 ## 环境说明
 
-- python 3.5.2 or python 2.7.6
+- python 3.5.2
+- requests 2.11
+- Tesseract-OCR
+- PIL
 
 ### 环境安装方法
 - pip install requests
