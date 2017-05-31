@@ -32,12 +32,13 @@ private.txt中，各行表示意义如下：
 ### 环境安装方法
 - pip install requests
 - pip install Pillow
-- 登录网址默认为http://onestop.ucas.ac.cn/home/index，如果为sep.ucas.as.cn那么需要在安装如下环境：
+- 登录网址默认为 http://onestop.ucas.ac.cn/home/index ，如果为 sep.ucas.as.cn 那么需要在安装如下环境：
   - pip install Pillow
   - Tesseract-OCR
     - windows下安装：http://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-setup-3.05.00dev.exe
       - 安装时候勾选Registry settings
     - Linux  \  MAC OS X安装见 https://github.com/tesseract-ocr/tesseract/wiki
+
 
 ## 更新说明
 
