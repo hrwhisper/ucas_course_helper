@@ -15,6 +15,9 @@ class NoLoginError(Exception):
 class NotFoundCourseError(Exception):
     pass
 
+class NotSelectCourseTime(Exception):
+    pass
+
 
 class UcasCourse(object):
     def __init__(self):
@@ -70,6 +73,8 @@ class UcasCourse(object):
         if not self.course: return None
         # 选课，主要是获取课程背后的ID
         html, institute_id = self.get_course()
+        if html.find('<label id="loginError" class="error">未开通选课权限</label>'):
+            raise NotSelectCourseTime
         url = 'http://jwxk.ucas.ac.cn' + \
               re.findall(r'<form id="regfrm" name="regfrm" action="([\S]+)" \S*class=', html)[0]
         sid = re.findall(r'<span id="courseCode_([\S]+)">' + self.course[0][0] + '</span>', html)
@@ -107,6 +112,9 @@ class UcasCourse(object):
                 self._init_session()
             except NotFoundCourseError:
                 print('尝试选择课程编号为 {} 的时候出错，可能编号错误或者已被选上'.format(self.course.pop(0)[0]))
+            except NotSelectCourseTime:
+                print('选课时间未到')
+                self.sleep(10)
             except Exception as e:
                 print(e)
                 self.sleep()

@@ -2,6 +2,7 @@
 # @Date    : 2017/2/1
 # @Author  : hrwhisper
 import codecs
+import json
 import os
 import time
 from sys import exit
@@ -9,12 +10,48 @@ import requests
 from MyOCR import image_to_string
 
 
+class UserNameOrPasswordError(Exception):
+    pass
+
+
 class LoginUCAS(object):
-    def __init__(self, vercode_save_name='certCode.jpg'):
+    def __init__(self, use_onestop=True, vercode_save_name='certCode.jpg'):
         self.username, self.password = LoginUCAS._read_username_and_password()
         self.cnt = 0
         self.__BEAUTIFULSOUPPARSE = 'html5lib'  # or use 'lxml'
         self.session = requests.session()
+        self.vercode_save_name = vercode_save_name
+        self.use_onestop = use_onestop
+        if use_onestop:
+            self._onestop_init()
+        else:
+            self._sep_init()
+
+    def _onestop_init(self):
+        self.url = {
+            'base_url': 'http://onestop.ucas.ac.cn/home/index',
+            'verification_code': None,
+            'login_url': 'http://onestop.ucas.ac.cn/Ajax/Login/0'
+        }
+        # self.session.get(self.url['base_url'])
+        self.headers = {
+            'Host': 'onestop.ucas.ac.cn',
+            'Referer': 'http://onestop.ucas.ac.cn/home/index',
+            'X-Requested-With': 'XMLHttpRequest',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0'
+        }
+        self.post_data = {
+            "username": self.username,
+            "password": self.password,
+            "remember": 'checked',
+        }
+
+    def _sep_init(self):
+        self.url = {
+            'base_url': 'http://sep.ucas.ac.cn/',
+            'verification_code': 'http://sep.ucas.ac.cn/changePic',
+            'login_url': "http://sep.ucas.ac.cn/slogin"
+        }
         self.headers = {
             "Host": "sep.ucas.ac.cn",
             "Connection": "keep-alive",
@@ -24,7 +61,12 @@ class LoginUCAS(object):
             "Accept-Encoding": "gzip, deflate, sdch",
             "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4",
         }
-        self.vercode_save_name = vercode_save_name
+        self.post_data = {
+            "userName": self.username,
+            "pwd": self.password,
+            "sb": "sb",
+            "rememberMe": 1,
+        }
 
     @classmethod
     def _read_username_and_password(cls):
@@ -43,7 +85,7 @@ class LoginUCAS(object):
         return username, password
 
     def _download_verification_code(self):
-        r = self.session.get('http://sep.ucas.ac.cn/changePic', stream=True, headers=self.headers)
+        r = self.session.get(self.url['verification_code'], stream=True, headers=self.headers)
         with open(self.vercode_save_name, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:  # filter out keep-alive new chunks
@@ -51,41 +93,50 @@ class LoginUCAS(object):
                     f.flush()
         return self.vercode_save_name
 
+    def _need_verification_code(self):
+        r = self.session.get(self.url['base_url'])
+        return r.text.find('验证码') != -1
+
     def login_sep(self):
-        # 登录sep
-        if not self.cnt:
-            print('Login....')
-        url = "http://sep.ucas.ac.cn/slogin"
-        cert_code = image_to_string(self._download_verification_code())
-        while not cert_code or len(cert_code) < 4:
-            cert_code = image_to_string(self._download_verification_code())
-        post_data = {
-            "userName": self.username,
-            "pwd": self.password,
-            "sb": "sb",
-            "certCode": cert_code,
-            "rememberMe": 1,
-        }
-        html = self.session.post(url, data=post_data, headers=self.headers).text
-        if html.find('密码错误') != -1:
+        try:
+            if self.use_onestop:
+                html = self.session.post(
+                    self.url['login_url'], data=self.post_data, headers=self.headers).text
+                res = json.loads(html)
+                if not res['f']:
+                    raise UserNameOrPasswordError
+                else:
+                    html = self.session.get(res['msg']).text
+                    print('登录成功')
+            else:
+                # 登录sep
+                if not self.cnt:
+                    print('Login....')
+                url = self.url['login_url']
+                try:
+                    if self._need_verification_code():
+                        cert_code = image_to_string(self._download_verification_code())
+                        while not cert_code or len(cert_code) < 4:
+                            cert_code = image_to_string(self._download_verification_code())
+                            self.post_data["certCode"] = cert_code
+
+                    html = self.session.post(url, data=self.post_data, headers=self.headers).text
+                    if html.find('密码错误') != -1:
+                        raise UserNameOrPasswordError
+                    elif html.find('验证码错误') != -1:
+                        time.sleep(2)
+                        self.cnt += 1
+                        return self.login_sep()
+                    print("登录成功 {}".format(self.cnt))
+                except requests.exceptions.ConnectionError:
+                    print('请检查网络连接')
+                    exit(1)
+        except UserNameOrPasswordError:
             print('用户名或者密码错误，请检查private文件')
             os.system("pause")
             exit(1)
-        elif html.find('验证码错误') != -1:
-            time.sleep(2)
-            self.cnt += 1
-            return self.login_sep()
-        print("登录成功 {}".format(self.cnt))
         return self
 
 
 if __name__ == '__main__':
-    LoginUCAS().login_sep()
-    # total = 0
-    # test_num = 50
-    # for i in range(test_num):
-    #     UcasLogin = LoginUCAS()
-    #     UcasLogin.login_sep()
-    #     total += UcasLogin.cnt
-    #     print(i, total, '\n------------\n')
-    # print(total, total / test_num)
+    LoginUCAS(True).login_sep()
