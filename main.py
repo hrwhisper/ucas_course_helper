@@ -5,6 +5,10 @@ from __future__ import print_function
 import re
 import time
 
+import datetime
+
+import requests
+
 from LoginUCAS import LoginUCAS
 
 
@@ -15,6 +19,7 @@ class NoLoginError(Exception):
 class NotFoundCourseError(Exception):
     pass
 
+
 class NotSelectCourseTime(Exception):
     pass
 
@@ -23,11 +28,16 @@ class UcasCourse(object):
     def __init__(self):
         self.session = None
         self.headers = None
-        self._init_session()
+        self.use_onestop = False
         self.course = UcasCourse._read_course_info()
+        self._init_session()
 
     def _init_session(self):
-        t = LoginUCAS().login_sep()
+        try:
+            t = LoginUCAS(self.use_onestop).login_sep()
+        except requests.exceptions.ConnectionError:
+            self.use_onestop = not self.use_onestop
+            return self._init_session()
         self.session = t.session
         self.headers = t.headers
 
@@ -73,7 +83,7 @@ class UcasCourse(object):
         if not self.course: return None
         # 选课，主要是获取课程背后的ID
         html, institute_id = self.get_course()
-        if html.find('<label id="loginError" class="error">未开通选课权限</label>'):
+        if html.find('<label id="loginError" class="error">未开通选课权限</label>') != -1:
             raise NotSelectCourseTime
         url = 'http://jwxk.ucas.ac.cn' + \
               re.findall(r'<form id="regfrm" name="regfrm" action="([\S]+)" \S*class=', html)[0]
@@ -86,11 +96,11 @@ class UcasCourse(object):
         if self.course[0][1] == '1':
             post_data['did_' + sid] = sid
 
-        r = self.session.post(url, data=post_data, headers=self.headers)
-        if r.text.find(u'选课成功') != -1:
+        html = self.session.post(url, data=post_data, headers=self.headers).text
+        if html.find(u'选课成功') != -1:
             return self.course.pop(0)[0]
         else:  # 一般是课程已满
-            info = re.findall('<label id="loginError" class="error">([\S]+)</label>', r.text)[0]
+            info = re.findall('<label id="loginError" class="error">(.+)</label>', html)[0]
             print(info)
             return None
 
@@ -114,7 +124,7 @@ class UcasCourse(object):
                 print('尝试选择课程编号为 {} 的时候出错，可能编号错误或者已被选上'.format(self.course.pop(0)[0]))
             except NotSelectCourseTime:
                 print('选课时间未到')
-                self.sleep(10)
+                self.sleep(20)
             except Exception as e:
                 print(e)
                 self.sleep()
@@ -122,4 +132,7 @@ class UcasCourse(object):
 
 
 if __name__ == '__main__':
+    while datetime.datetime.now() < datetime.datetime(2017, 6, 1, 12, 25, 00):
+        print('wait ',datetime.datetime.now())
+        time.sleep(60)
     UcasCourse().start()
