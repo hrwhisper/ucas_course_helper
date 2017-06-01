@@ -28,18 +28,15 @@ class UcasCourse(object):
     def __init__(self):
         self.session = None
         self.headers = None
-        self.use_onestop = False
+        self.jwxk_html = None
         self.course = UcasCourse._read_course_info()
         self._init_session()
 
     def _init_session(self):
-        try:
-            t = LoginUCAS(self.use_onestop).login_sep()
-        except requests.exceptions.ConnectionError:
-            self.use_onestop = not self.use_onestop
-            return self._init_session()
+        t = LoginUCAS().login_sep()
         self.session = t.session
         self.headers = t.headers
+        self.login_jwxk()
 
     @classmethod
     def _read_course_info(self):
@@ -51,7 +48,7 @@ class UcasCourse(object):
         return courses
 
     def login_jwxk(self):
-        # 从sep中获取Identity Key来登录选课系统
+        # 从sep中获取Identity Key来登录选课系统，进入选课选择课学院的那个页面
         url = "http://sep.ucas.ac.cn/portal/site/226/821"
         r = self.session.get(url, headers=self.headers)
         try:
@@ -64,11 +61,11 @@ class UcasCourse(object):
         self.session.get(url, headers=self.headers)
         url = 'http://jwxk.ucas.ac.cn/courseManage/main'
         r = self.session.get(url, headers=self.headers)
-        return r.text
+        self.jwxk_html = r.text
 
     def get_course(self):
         # 获取课程开课学院的id，以及选课界面HTML
-        html = self.login_jwxk()
+        html = self.jwxk_html
         regular = r'<label for="id_([\S]+)">' + self.course[0][0][:2] + r'-'
         institute_id = re.findall(regular, html)[0]
 
@@ -132,7 +129,7 @@ class UcasCourse(object):
 
 
 if __name__ == '__main__':
-    while datetime.datetime.now() < datetime.datetime(2017, 6, 1, 12, 25, 00):
-        print('wait ',datetime.datetime.now())
-        time.sleep(60)
+    # while datetime.datetime.now() < datetime.datetime(2017, 6, 1, 12, 10, 00):
+    #     print('wait ',datetime.datetime.now())
+    #     time.sleep(60)
     UcasCourse().start()

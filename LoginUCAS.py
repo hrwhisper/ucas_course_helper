@@ -22,7 +22,10 @@ class LoginUCAS(object):
         self.session = requests.session()
         self.vercode_save_name = vercode_save_name
         self.use_onestop = use_onestop
-        if use_onestop:
+        self._init_login_url()
+
+    def _init_login_url(self):
+        if self.use_onestop:
             self._onestop_init()
         else:
             self._sep_init()
@@ -99,6 +102,8 @@ class LoginUCAS(object):
 
     def login_sep(self):
         try:
+            if not self.cnt:
+                print('Login....' + self.url['base_url'])
             if self.use_onestop:
                 html = self.session.post(
                     self.url['login_url'], data=self.post_data, headers=self.headers).text
@@ -107,20 +112,16 @@ class LoginUCAS(object):
                     raise UserNameOrPasswordError
                 else:
                     html = self.session.get(res['msg']).text
-                    print('登录成功')
+                    print("登录成功 {}".format(self.cnt))
             else:
                 # 登录sep
-                if not self.cnt:
-                    print('Login....')
-                url = self.url['login_url']
                 try:
                     if self._need_verification_code():
                         cert_code = image_to_string(self._download_verification_code())
                         while not cert_code or len(cert_code) < 4:
                             cert_code = image_to_string(self._download_verification_code())
                             self.post_data["certCode"] = cert_code
-
-                    html = self.session.post(url, data=self.post_data, headers=self.headers).text
+                    html = self.session.post(self.url['login_url'], data=self.post_data, headers=self.headers).text
                     if html.find('密码错误') != -1:
                         raise UserNameOrPasswordError
                     elif html.find('验证码错误') != -1:
@@ -135,6 +136,14 @@ class LoginUCAS(object):
             print('用户名或者密码错误，请检查private文件')
             os.system("pause")
             exit(1)
+        except requests.exceptions.ConnectionError:
+            self.use_onestop = not self.use_onestop
+            self._init_login_url()
+            print("login time out, change to " + self.url['base_url'])
+            if self.cnt > 20:
+                print("估计是教务处挂了")
+                exit(1)
+            return self.login_sep()
         return self
 
 
