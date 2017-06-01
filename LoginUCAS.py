@@ -140,6 +140,7 @@ class LoginUCAS(object):
             self.use_onestop = not self.use_onestop
             self._init_login_url()
             print("login time out, change to " + self.url['base_url'])
+            self.cnt += 1
             if self.cnt > 20:
                 print("估计是教务处挂了")
                 exit(1)
