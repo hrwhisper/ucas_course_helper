@@ -39,9 +39,10 @@ class LoginUCAS(object):
         # self.session.get(self.url['base_url'])
         self.headers = {
             'Host': 'onestop.ucas.ac.cn',
+            "Connection": "keep-alive",
             'Referer': 'http://onestop.ucas.ac.cn/home/index',
             'X-Requested-With': 'XMLHttpRequest',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0'
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
         }
         self.post_data = {
             "username": self.username,
